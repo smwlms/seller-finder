@@ -1,16 +1,18 @@
 import { useState, useMemo } from "react";
-import HeroSection from "@/components/calculator/HeroSection";
-import InputSection from "@/components/calculator/InputSection";
-import MissedPotentialCard from "@/components/calculator/MissedPotentialCard";
-import DatabaseResultsCard from "@/components/calculator/DatabaseResultsCard";
-import VisitsResultsCard from "@/components/calculator/VisitsResultsCard";
-import CtaSection from "@/components/calculator/CtaSection";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ExternalLink } from "lucide-react";
+import InputCard from "@/components/calculator/InputCard";
+import CoreResultCard from "@/components/calculator/CoreResultCard";
+import DetailsAccordion from "@/components/calculator/DetailsAccordion";
+import SettingsCollapsible from "@/components/calculator/SettingsCollapsible";
 import {
   CalculatorInputs,
   DEFAULT_INPUTS,
   calculateDatabaseResults,
   calculateVisitsResults,
   buildCtaUrl,
+  buildViewModel,
 } from "@/lib/calculations";
 
 const Calculator = () => {
@@ -18,30 +20,56 @@ const Calculator = () => {
 
   const dbResults = useMemo(() => calculateDatabaseResults(inputs), [inputs]);
   const visitsResults = useMemo(() => calculateVisitsResults(inputs), [inputs]);
-  const ctaUrl = useMemo(
-    () => buildCtaUrl(inputs, dbResults, visitsResults),
-    [inputs, dbResults, visitsResults]
-  );
+  const viewModel = useMemo(() => buildViewModel(inputs, dbResults, visitsResults), [inputs, dbResults, visitsResults]);
+  const ctaUrl = useMemo(() => buildCtaUrl(inputs, dbResults, visitsResults), [inputs, dbResults, visitsResults]);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container max-w-[1100px] mx-auto px-4 py-8">
-        <HeroSection />
+      <div className="container max-w-[1000px] mx-auto px-4 py-6">
+        {/* Compact Header */}
+        <header className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {viewModel.heroCopy.title}{" "}
+            <span className="text-primary">{viewModel.heroCopy.subtitle}</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+            {viewModel.heroCopy.microcopy}
+          </p>
+          <Link
+            to="/uitleg"
+            className="text-xs text-primary hover:underline mt-1 inline-block"
+          >
+            Hoe berekenen we dit? →
+          </Link>
+        </header>
 
-        <InputSection inputs={inputs} onChange={setInputs} />
+        {/* Above the fold: Inputs + Core Result */}
+        <div className="grid gap-4 lg:grid-cols-2 mb-4">
+          <InputCard inputs={inputs} onChange={setInputs} />
+          <CoreResultCard viewModel={viewModel} />
+        </div>
 
-        {/* Missed Potential Card - Prominent */}
-        <section className="mt-8">
-          <MissedPotentialCard dbResults={dbResults} visitsResults={visitsResults} />
+        {/* CTA - Above fold */}
+        <div className="text-center py-4 mb-6">
+          <Button size="lg" className="px-8" asChild>
+            <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+              Plan een demo
+              <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Gratis, vrijblijvend, 30 minuten
+          </p>
+        </div>
+
+        {/* Settings */}
+        <SettingsCollapsible inputs={inputs} onChange={setInputs} />
+
+        {/* Details Accordion - Below fold */}
+        <section className="mt-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Details</h3>
+          <DetailsAccordion viewModel={viewModel} />
         </section>
-
-        {/* Results Section */}
-        <section className="grid gap-6 md:grid-cols-2 mt-6">
-          <DatabaseResultsCard results={dbResults} rampMonths={inputs.rampMonths} />
-          <VisitsResultsCard results={visitsResults} rampMonths={inputs.rampMonths} />
-        </section>
-
-        <CtaSection ctaUrl={ctaUrl} />
       </div>
     </div>
   );

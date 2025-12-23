@@ -341,6 +341,64 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
 }
 
 /**
+ * ViewModel for UI - separates "above the fold" from "details"
+ */
+export interface CalculatorViewModel {
+  heroCopy: {
+    title: string;
+    subtitle: string;
+    microcopy: string;
+  };
+  primaryOutputs: {
+    extraDealsDb: number;
+    extraDealsVisitLow: number;
+    extraDealsVisitHigh: number;
+    extraRevenueDbYearSteady: number;
+    extraRevenueVisitYearSteadyLow: number;
+    extraRevenueVisitYearSteadyHigh: number;
+  };
+  transparencyText: string;
+  overlapWarning: string;
+  detailOutputs: {
+    database: DatabaseResults;
+    visits: VisitsResults;
+  };
+  rampMonths: number;
+}
+
+/**
+ * Build the view model for the calculator UI
+ */
+export function buildViewModel(
+  inputs: CalculatorInputs,
+  dbResults: DatabaseResults,
+  visitsResults: VisitsResults
+): CalculatorViewModel {
+  return {
+    heroCopy: {
+      title: "De vergeten verkoper",
+      subtitle: "Mini calculator",
+      microcopy: "We schatten hoeveel kandidaat-kopers ook een potentiële verkoper zijn, en tonen wat je mist zonder automatische opvolging.",
+    },
+    primaryOutputs: {
+      extraDealsDb: dbResults.extraDealsDb,
+      extraDealsVisitLow: visitsResults.extraDealsVisitLow,
+      extraDealsVisitHigh: visitsResults.extraDealsVisitHigh,
+      extraRevenueDbYearSteady: dbResults.extraRevenueDbYearSteady,
+      extraRevenueVisitYearSteadyLow: visitsResults.extraRevenueVisitYearSteadyLow,
+      extraRevenueVisitYearSteadyHigh: visitsResults.extraRevenueVisitYearSteadyHigh,
+    },
+    transparencyText: `Colibry volgt 100% op. Conversieratio blijft dezelfde (${inputs.conversionRatePercent}%); het verschil komt door bereik.`,
+    overlapWarning: "Tel deze bedragen niet op wegens mogelijke overlap tussen database en bezoekersstroom.",
+    detailOutputs: {
+      database: dbResults,
+      visits: visitsResults,
+    },
+    rampMonths: inputs.rampMonths,
+  };
+}
+
+/**
  * Build CTA URL with all query parameters
  */
 export function buildCtaUrl(
