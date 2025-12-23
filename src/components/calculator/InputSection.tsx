@@ -2,10 +2,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, Settings, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { CalculatorInputs, DEFAULT_INPUTS, formatNumber } from "@/lib/calculations";
+import { CalculatorInputs, DEFAULT_INPUTS } from "@/lib/calculations";
 
 interface InputSectionProps {
   inputs: CalculatorInputs;
@@ -45,32 +47,56 @@ const InputSection = ({ inputs, onChange }: InputSectionProps) => {
               className="text-lg"
             />
             <p className="text-xs text-muted-foreground">
-              Enkel contacten ≤ 24 maanden oud en budget &gt; €350.000
+              Enkel contacten met een zoekfiche, niet ouder dan 12 maanden, en budget ≥ €350.000.
             </p>
           </div>
 
-          {/* Follow-up Percentage */}
+          {/* Manual Follow-up Percentage */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Follow-up percentage: {inputs.followUpPercent}%
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">
+                Hoeveel % volg je vandaag manueel op? {inputs.manualFollowUpPercent}%
+              </Label>
+              <Badge variant="secondary" className="text-xs">
+                Colibry: 100%
+              </Badge>
+            </div>
             <Slider
-              value={[inputs.followUpPercent]}
-              onValueChange={([value]) => updateInput("followUpPercent", value)}
-              min={1}
-              max={10}
+              value={[inputs.manualFollowUpPercent]}
+              onValueChange={([value]) => updateInput("manualFollowUpPercent", value)}
+              min={0}
+              max={20}
               step={1}
               className="py-4"
             />
             <p className="text-xs text-muted-foreground">
-              Percentage van de doelgroep voor automatische opvolging
+              Manueel = beperkt door capaciteit
             </p>
           </div>
 
-          {/* Visits per Year */}
+          {/* Period Unit Selector */}
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-4 mb-4">
+              <Label className="text-sm font-medium">Invoer per:</Label>
+              <Select
+                value={inputs.periodUnit}
+                onValueChange={(value: 'year' | 'month') => updateInput("periodUnit", value)}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="year">Per jaar</SelectItem>
+                  <SelectItem value="month">Per maand</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Visits */}
           <div className="space-y-2">
             <Label htmlFor="visits12m" className="text-sm font-medium">
-              Plaatsbezoeken per jaar
+              Plaatsbezoeken {inputs.periodUnit === 'month' ? 'per maand' : 'per jaar'}
             </Label>
             <Input
               id="visits12m"
@@ -82,10 +108,10 @@ const InputSection = ({ inputs, onChange }: InputSectionProps) => {
             />
           </div>
 
-          {/* Sales per Year */}
+          {/* Sales */}
           <div className="space-y-2">
             <Label htmlFor="sales12m" className="text-sm font-medium">
-              Verkopen per jaar
+              Verkopen {inputs.periodUnit === 'month' ? 'per maand' : 'per jaar'}
             </Label>
             <Input
               id="sales12m"
@@ -183,6 +209,27 @@ const InputSection = ({ inputs, onChange }: InputSectionProps) => {
                     updateInput("commissionPercent", parseFloat(e.target.value) || 2.78)
                   }
                 />
+              </div>
+
+              {/* Conversion Rate */}
+              <div className="space-y-2">
+                <Label htmlFor="conversionRatePercent" className="text-sm font-medium">
+                  Conversieratio naar effectief inkoopmandaat (%)
+                </Label>
+                <Input
+                  id="conversionRatePercent"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={inputs.conversionRatePercent}
+                  onChange={(e) =>
+                    updateInput("conversionRatePercent", parseFloat(e.target.value) || 2)
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Conservatief automation-effect. Niet in maand 1.
+                </p>
               </div>
 
               {/* Ramp Months */}

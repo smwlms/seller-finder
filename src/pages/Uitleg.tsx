@@ -31,23 +31,29 @@ const Uitleg = () => {
             <div>
               <strong className="text-foreground">dbBuyers</strong>
               <p className="text-muted-foreground">
-                Aantal actieve kandidaat kopers ≤ 24 maanden oud en budget &gt; €350.000
+                Kandidaat kopers met een zoekfiche, niet ouder dan 12 maanden, en budget ≥ €350.000
               </p>
             </div>
             <div>
-              <strong className="text-foreground">followUpPercent</strong>
+              <strong className="text-foreground">manualFollowUpPercent</strong>
               <p className="text-muted-foreground">
-                Percentage van de doelgroep dat je automatisch laat opvolgen
+                Percentage van de doelgroep dat je vandaag manueel opvolgt (beperkt door capaciteit)
               </p>
             </div>
             <div>
-              <strong className="text-foreground">visits12m en sales12m</strong>
+              <strong className="text-foreground">periodUnit</strong>
               <p className="text-muted-foreground">
-                Plaatsbezoeken en verkopen in de laatste 12 maanden
+                Kies of je plaatsbezoeken en verkopen invoert per maand of per jaar
               </p>
             </div>
             <div>
-              <strong className="text-foreground">Instellingen</strong>
+              <strong className="text-foreground">conversionRatePercent</strong>
+              <p className="text-muted-foreground">
+                Conversieratio naar effectief inkoopmandaat (in Instellingen)
+              </p>
+            </div>
+            <div>
+              <strong className="text-foreground">Overige instellingen</strong>
               <p className="text-muted-foreground">
                 workdaysPerMonth, ownershipRate, avgSalePrice, commissionPercent, rampMonths
               </p>
@@ -62,19 +68,19 @@ const Uitleg = () => {
           </h2>
           <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
             <li>
+              <strong className="text-foreground">Colibry coverage = 100%</strong> — Colibry volgt iedereen automatisch op
+            </li>
+            <li>
               <strong className="text-foreground">ownershipRate</strong> default 71% — het aandeel kandidaat kopers dat al een eigendom bezit
             </li>
             <li>
-              <strong className="text-foreground">Plaatsbezoeken</strong> — we rekenen met niet-kopers per maand
+              <strong className="text-foreground">conversionRatePercent</strong> default 2% — conversie naar effectief inkoopmandaat
             </li>
             <li>
               Voor plaatsbezoeken gebruiken we een <strong className="text-foreground">range 60% tot 70%</strong> van de niet-kopers als potentiële verkopers
             </li>
             <li>
-              <strong className="text-foreground">commissionPercent</strong> en <strong className="text-foreground">avgSalePrice</strong> zijn aanpasbaar
-            </li>
-            <li>
-              <strong className="text-foreground">followUpPercent</strong> is automation coverage — niet manuele opvolging
+              <strong className="text-foreground">Overlap waarschuwing</strong> — Database en plaatsbezoeken kunnen overlappen. Tel ze niet op.
             </li>
           </ul>
         </section>
@@ -85,11 +91,27 @@ const Uitleg = () => {
             C. Kernberekeningen
           </h2>
 
-          <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Database</h3>
+          <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Manueel vs Colibry</h3>
+          <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
+            <pre className="text-foreground">{`manualCoverage = manualFollowUpPercent / 100
+colibryCoverage = 1.0  // 100%
+conversionRate = conversionRatePercent / 100`}</pre>
+          </div>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Database</h3>
           <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
             <pre className="text-foreground">{`dbSellers = dbBuyers × ownershipRate
-dbActivated = dbSellers × (followUpPercent / 100)
-revenueDbYearSteady = dbActivated × avgSalePrice × (commissionPercent / 100)`}</pre>
+
+// Manueel scenario
+dbWarmManual = dbSellers × manualCoverage
+dbDealsManual = dbWarmManual × conversionRate
+
+// Colibry scenario
+dbWarmColibry = dbSellers × colibryCoverage
+dbDealsColibry = dbWarmColibry × conversionRate
+
+// Delta
+extraDealsDb = dbDealsColibry - dbDealsManual`}</pre>
           </div>
 
           <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Plaatsbezoeken</h3>
@@ -101,11 +123,10 @@ nonBuyersPerMonth = max(visitsPerMonth - salesPerMonth, 0)
 visitSellersMonthLow = nonBuyersPerMonth × 0.60
 visitSellersMonthHigh = nonBuyersPerMonth × 0.70
 
-visitActivatedYearLow = (visitSellersMonthLow × 12) × (followUpPercent / 100)
-visitActivatedYearHigh = (visitSellersMonthHigh × 12) × (followUpPercent / 100)
-
-revenueYearSteadyLow = visitActivatedYearLow × avgSalePrice × (commissionPercent / 100)
-revenueYearSteadyHigh = visitActivatedYearHigh × avgSalePrice × (commissionPercent / 100)`}</pre>
+// Per scenario (manual of colibry)
+warmContacts = visitSellersYear × coverage
+deals = warmContacts × conversionRate
+revenue = deals × avgSalePrice × commissionPercent`}</pre>
           </div>
         </section>
 
@@ -131,29 +152,13 @@ Anders:
             Met deze keuze ligt de overgang van ongeveer 10% naar 90% effect over ongeveer rampMonths maanden, met het middenpunt op rampMonths.
           </p>
 
-          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Cumulatieve omzet (plaatsbezoeken)</h3>
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Cumulatieve omzet</h3>
           <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
-            <pre className="text-foreground">{`monthlySteadyLow = revenueYearSteadyLow / 12
-monthlySteadyHigh = revenueYearSteadyHigh / 12
+            <pre className="text-foreground">{`monthlySteady = revenueYearSteady / 12
 
-revenue12mLow = sum(m=1..12) monthlySteadyLow × rampFactor(m)
-revenue12mHigh = sum(m=1..12) monthlySteadyHigh × rampFactor(m)
-
-revenue24mLow = sum(m=1..24) monthlySteadyLow × rampFactor(m)
-revenue24mHigh = sum(m=1..24) monthlySteadyHigh × rampFactor(m)
-
-year2OnlyLow = revenue24mLow - revenue12mLow
-year2OnlyHigh = revenue24mHigh - revenue12mHigh`}</pre>
-          </div>
-
-          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Cumulatieve omzet (database)</h3>
-          <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
-            <pre className="text-foreground">{`monthlyDbSteady = revenueDbYearSteady / 12
-
-revenueDb12m = sum(m=1..12) monthlyDbSteady × rampFactor(m)
-revenueDb24m = sum(m=1..24) monthlyDbSteady × rampFactor(m)
-
-revenueDbYear2Only = revenueDb24m - revenueDb12m`}</pre>
+revenue12m = sum(m=1..12) monthlySteady × rampFactor(m)
+revenue24m = sum(m=1..24) monthlySteady × rampFactor(m)
+year2Only = revenue24m - revenue12m`}</pre>
           </div>
         </section>
 
