@@ -102,7 +102,7 @@ export interface CalculatorInputs {
   emailsPerMonth: number;
   // Acquisition context (for details/uitleg only)
   acquisitionConversationsPerYear: number;
-  shareMandatesWithPriorVisit: number;
+  shareMandatesWithPriorVisit: number; // baseline: 29.5% of mandates came from prior contact
 }
 
 // Default values
@@ -126,6 +126,14 @@ export const DEFAULT_INPUTS: CalculatorInputs = {
   acquisitionConversationsPerYear: 173,
   shareMandatesWithPriorVisit: 0.295, // 29.5%
 };
+
+// Baseline status results (what you have today without Colibry)
+export interface BaselineStatus {
+  salesPerYear: number;
+  priorVisitShare: number; // 29.5%
+  baselineMandatesFromPriorContact: number; // sales × priorVisitShare
+  baselinePercentFormatted: string; // "29,5%"
+}
 
 // Database calculation results
 export interface DatabaseResults {
@@ -166,6 +174,9 @@ export interface VisitsResults {
   visitSellersYearHigh: number;
   visitSellersPerDayLow: number;
   visitSellersPerDayHigh: number;
+  // Untapped pool (silent sellers - baseline)
+  untappedSellersYearLow: number;
+  untappedSellersYearHigh: number;
   // Manual scenario
   visitWarmManualLow: number;
   visitWarmManualHigh: number;
@@ -224,6 +235,22 @@ function normalizeInputs(inputs: CalculatorInputs): { visits12m: number; sales12
   return {
     visits12m: inputs.visits12m,
     sales12m: inputs.sales12m,
+  };
+}
+
+/**
+ * Calculate baseline status (what you have today without Colibry)
+ */
+export function calculateBaselineStatus(inputs: CalculatorInputs): BaselineStatus {
+  const { sales12m } = normalizeInputs(inputs);
+  const priorVisitShare = Math.max(0, Math.min(1, inputs.shareMandatesWithPriorVisit));
+  const baselineMandatesFromPriorContact = sales12m * priorVisitShare;
+  
+  return {
+    salesPerYear: sales12m,
+    priorVisitShare,
+    baselineMandatesFromPriorContact: Math.round(baselineMandatesFromPriorContact),
+    baselinePercentFormatted: `${(priorVisitShare * 100).toFixed(1).replace('.', ',')}%`,
   };
 }
 
@@ -319,6 +346,7 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
 
 /**
  * Calculate visits potential with 60-70% range and Manual vs Colibry scenarios
+ * Also calculates untapped pool (silent sellers - baseline mandates from prior contact)
  * Colibry includes dropoff from bounces/unsubs
  */
 export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults {
@@ -327,6 +355,9 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
   const colibryCoverage = 1.0; // 100%
   const conversionRate = inputs.conversionRatePercent / 100;
   const commissionDecimal = inputs.commissionPercent / 100;
+  
+  // Baseline from prior contact
+  const baseline = calculateBaselineStatus(inputs);
 
   const visitsPerMonth = visits12m / 12;
   const salesPerMonth = sales12m / 12;
@@ -337,6 +368,11 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
   const visitSellersMonthHigh = nonBuyersPerMonth * 0.70;
   const visitSellersYearLow = visitSellersMonthLow * 12;
   const visitSellersYearHigh = visitSellersMonthHigh * 12;
+
+  // Untapped pool = silent sellers - what we already get from prior contact
+  // This shows "what's still on the table"
+  const untappedSellersYearLow = Math.max(visitSellersYearLow - baseline.baselineMandatesFromPriorContact, 0);
+  const untappedSellersYearHigh = Math.max(visitSellersYearHigh - baseline.baselineMandatesFromPriorContact, 0);
 
   // Per day calculation
   const visitSellersPerDayLow = visitSellersMonthLow / inputs.workdaysPerMonth;
@@ -410,6 +446,8 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
     visitSellersYearHigh: Math.round(visitSellersYearHigh),
     visitSellersPerDayLow,
     visitSellersPerDayHigh,
+    untappedSellersYearLow: Math.round(untappedSellersYearLow),
+    untappedSellersYearHigh: Math.round(untappedSellersYearHigh),
     visitWarmManualLow: Math.round(visitWarmManualLow),
     visitWarmManualHigh: Math.round(visitWarmManualHigh),
     visitDealsManualLow: Math.round(visitDealsManualLow),
@@ -471,6 +509,8 @@ export interface CalculatorViewModel {
     subtitle: string;
     microcopy: string;
   };
+  // Baseline status: what you have today
+  baselineStatus: BaselineStatus;
   primaryOutputs: {
     extraDealsDb: number;
     extraDealsVisitLow: number;
@@ -509,6 +549,7 @@ export function buildViewModel(
   visitsResults: VisitsResults
 ): CalculatorViewModel {
   const acquisitionContext = calculateAcquisitionContext(inputs);
+  const baselineStatus = calculateBaselineStatus(inputs);
   
   return {
     heroCopy: {
@@ -516,6 +557,7 @@ export function buildViewModel(
       subtitle: "Mini calculator",
       microcopy: "We schatten hoeveel kandidaat-kopers ook een potentiële verkoper zijn, en tonen wat je mist zonder automatische opvolging.",
     },
+    baselineStatus,
     primaryOutputs: {
       extraDealsDb: dbResults.extraDealsDb,
       extraDealsVisitLow: visitsResults.extraDealsVisitLow,
@@ -572,6 +614,8 @@ export function buildCtaUrl(
     bounceRate: String(inputs.bounceRate),
     unsubPerEmail: String(inputs.unsubPerEmail),
     emailsPerMonth: String(inputs.emailsPerMonth),
+    // Baseline
+    priorVisitShare: String(inputs.shareMandatesWithPriorVisit),
     // Database delta outputs
     extraDealsDb: String(dbResults.extraDealsDb),
     extraRevenueDbYearSteady: String(Math.round(dbResults.extraRevenueDbYearSteady)),

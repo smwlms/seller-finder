@@ -1,12 +1,12 @@
 import { CalculatorViewModel, formatEuro, formatNumber } from "@/lib/calculations";
-import { TrendingUp, AlertTriangle } from "lucide-react";
+import { TrendingUp, AlertTriangle, Info } from "lucide-react";
 
 interface CoreResultCardProps {
   viewModel: CalculatorViewModel;
 }
 
 const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
-  const { primaryOutputs, transparencyText, overlapWarning } = viewModel;
+  const { primaryOutputs, transparencyText, overlapWarning, baselineStatus } = viewModel;
 
   const formatRange = (low: number, high: number) => {
     if (low === high) return formatNumber(low);
@@ -20,6 +20,21 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
 
   return (
     <div className="bg-card rounded-lg p-5 shadow-sm border-2 border-primary/40 h-fit">
+      {/* Baseline Status - "Vandaag" */}
+      <div className="flex items-start gap-2 mb-4 p-3 bg-secondary/50 rounded-md">
+        <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-foreground">
+            <strong>Vandaag:</strong> ~{baselineStatus.baselinePercentFormatted} (= {formatNumber(baselineStatus.baselineMandatesFromPriorContact)}) 
+            {" "}van je mandaten komt uit eerdere contacten
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Baseline zonder Colibry, gebaseerd op {formatNumber(baselineStatus.salesPerYear)} verkopen/jaar
+          </p>
+        </div>
+      </div>
+
+      {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">
@@ -36,7 +51,7 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
           
           {/* Key metric: Extra deals */}
           <div className="bg-primary/10 rounded-md p-3">
-            <p className="text-xs text-muted-foreground">Extra mandaten/jaar</p>
+            <p className="text-xs text-muted-foreground">Extra mandaten/jaar (gemist)</p>
             <p className="text-2xl font-bold text-primary">
               {formatNumber(primaryOutputs.extraDealsDb)}
             </p>
@@ -72,7 +87,7 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
           
           {/* Key metric: Extra deals (range) */}
           <div className="bg-primary/10 rounded-md p-3">
-            <p className="text-xs text-muted-foreground">Extra mandaten/jaar</p>
+            <p className="text-xs text-muted-foreground">Extra mandaten/jaar (gemist)</p>
             <p className="text-2xl font-bold text-primary">
               {formatRange(primaryOutputs.extraDealsVisitLow, primaryOutputs.extraDealsVisitHigh)}
             </p>
