@@ -229,7 +229,7 @@ effectiveFactor(m) = deliveredFactor × retention(m)`}</pre>
         </section>
 
         {/* Section G: Disclaimer */}
-        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-8">
+        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">
             G. Disclaimer
           </h2>
@@ -245,6 +245,70 @@ effectiveFactor(m) = deliveredFactor × retention(m)`}</pre>
               is enkel referentie-informatie uit de originele businesscase.
             </li>
           </ul>
+        </section>
+
+        {/* Section H: Baseline Status */}
+        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            H. Baseline status (vandaag)
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            We tonen expliciet wat je vandaag al haalt uit eerdere contacten, zonder Colibry.
+            Dit geeft context aan de "gemist potentieel" berekening.
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Formule</h3>
+          <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
+            <pre className="text-foreground">{`priorVisitShare = 0.295  // 29,5% default (instelbaar)
+baselineMandatesFromPriorContact = salesPerYear × priorVisitShare`}</pre>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            In de businesscase had 29,5% van de mandaten een voorafgaand plaatsbezoek. 
+            Dit is de baseline: wat je vandaag al haalt zonder Colibry.
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Interpretatie</h3>
+          <p className="text-sm text-muted-foreground">
+            Deze baseline wordt getoond boven de fold als context: 
+            "Vandaag: ~29,5% (= X) mandaten uit eerdere contacten".
+            Het helpt de gebruiker begrijpen wat hun huidige situatie is voordat ze de extra opbrengst zien.
+          </p>
+        </section>
+
+        {/* Section I: Untapped Pool */}
+        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            I. Untapped pool
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            De "untapped pool" toont hoeveel stille verkopers nog op tafel liggen, 
+            na aftrek van wat je vandaag al haalt.
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Formule</h3>
+          <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
+            <pre className="text-foreground">{`// Stille verkopers uit bezoekersstroom (range 60-70%)
+visitSellersYearLow = nonBuyersYear × 0.60
+visitSellersYearHigh = nonBuyersYear × 0.70
+
+// Untapped pool = stille verkopers − wat je al haalt
+untappedSellersYearLow = max(visitSellersYearLow - baselineMandatesFromPriorContact, 0)
+untappedSellersYearHigh = max(visitSellersYearHigh - baselineMandatesFromPriorContact, 0)`}</pre>
+          </div>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Waarom dit nuttig is</h3>
+          <p className="text-sm text-muted-foreground">
+            De untapped pool geeft een concreet beeld van de opportuniteit. 
+            Het is niet het aantal extra mandaten (dat hangt af van conversie), 
+            maar het potentieel dat nog niet benut wordt met de huidige aanpak.
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Beperking</h3>
+          <p className="text-sm text-muted-foreground">
+            We trekken alleen de baseline van de bezoekersstroom af. 
+            Voor database is er geen directe "baseline" omdat die stroom anders werkt 
+            (geen directe relatie met verkopen via plaatsbezoek).
+          </p>
         </section>
 
         {/* Back Button */}
