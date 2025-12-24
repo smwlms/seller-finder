@@ -22,79 +22,102 @@ const Uitleg = () => {
           </p>
         </div>
 
-        {/* Section A: Input Fields */}
+        {/* Section A: What do we measure */}
         <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">
-            A. Inputvelden
+            A. Wat meten we?
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            We schatten hoeveel kandidaat-kopers in je database en bezoekersstroom óók een potentiële verkoper zijn.
+            Vervolgens berekenen we hoeveel "extra mandaten" je mist zonder automatische nurture (Colibry) 
+            versus wat je vandaag manueel aankan.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <strong className="text-foreground">Kernvraag:</strong> Wat is het verschil in bereik en dus in resultaten 
+            tussen manuele opvolging (beperkt door capaciteit) en Colibry (100% automatische nurture)?
+          </p>
+        </section>
+
+        {/* Section B: Input Fields */}
+        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            B. Inputvelden
           </h2>
           <div className="space-y-3 text-sm">
             <div>
-              <strong className="text-foreground">dbBuyers</strong>
+              <strong className="text-foreground">Kandidaat-kopers in database</strong>
               <p className="text-muted-foreground">
-                Kandidaat kopers met een zoekfiche, niet ouder dan 12 maanden, en budget ≥ €350.000
+                Enkel contacten met een zoekfiche, niet ouder dan 12 maanden, en budget ≥ €350.000.
               </p>
             </div>
             <div>
-              <strong className="text-foreground">manualFollowUpPercent</strong>
+              <strong className="text-foreground">Manuele opvolging (%)</strong>
               <p className="text-muted-foreground">
-                Percentage van de doelgroep dat je vandaag manueel opvolgt (beperkt door capaciteit)
+                Hoeveel procent van de doelgroep kan je vandaag manueel opvolgen? (beperkt door tijd/capaciteit)
               </p>
             </div>
             <div>
-              <strong className="text-foreground">periodUnit</strong>
+              <strong className="text-foreground">Plaatsbezoeken & verkopen</strong>
               <p className="text-muted-foreground">
-                Kies of je plaatsbezoeken en verkopen invoert per maand of per jaar
+                Kies of je per maand of per jaar invoert. Beide velden delen dezelfde periode-eenheid.
               </p>
             </div>
             <div>
-              <strong className="text-foreground">conversionRatePercent</strong>
+              <strong className="text-foreground">Extra succesratio nurture (%)</strong>
               <p className="text-muted-foreground">
-                Conversieratio naar effectief inkoopmandaat (in Instellingen)
+                Conservatieve schatting: welk percentage van de geïdentificeerde "stille verkopers" 
+                levert extra inkoopmandaten op dankzij consistente opvolging? Default: 2%.
               </p>
             </div>
             <div>
               <strong className="text-foreground">Overige instellingen</strong>
               <p className="text-muted-foreground">
-                workdaysPerMonth, ownershipRate, avgSalePrice, commissionPercent, rampMonths
+                werkdagen/maand, eigendomsgraad, gem. verkoopprijs, commissie, inlooptijd (maanden), 
+                deliverability parameters, acquisitiecontext.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Section B: Assumptions */}
+        {/* Section C: Assumptions */}
         <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">
-            B. Assumpties
+            C. Aannames
           </h2>
           <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
             <li>
-              <strong className="text-foreground">Colibry coverage = 100%</strong> — Colibry volgt iedereen automatisch op
+              <strong className="text-foreground">Colibry coverage = 100%</strong> — 
+              Colibry volgt automatisch iedereen op (maar effectief bereik daalt door dropoff).
             </li>
             <li>
-              <strong className="text-foreground">ownershipRate</strong> default 71% — het aandeel kandidaat kopers dat al een eigendom bezit
+              <strong className="text-foreground">Eigendomsgraad</strong> default 71% — 
+              het aandeel kandidaat-kopers dat al een eigendom bezit (potentiële verkopers).
             </li>
             <li>
-              <strong className="text-foreground">conversionRatePercent</strong> default 2% — conversie naar effectief inkoopmandaat
+              <strong className="text-foreground">Extra succesratio</strong> default 2% — 
+              conservatieve conversie naar effectief inkoopmandaat door nurture.
             </li>
             <li>
-              Voor plaatsbezoeken gebruiken we een <strong className="text-foreground">range 60% tot 70%</strong> van de niet-kopers als potentiële verkopers
+              Voor plaatsbezoeken gebruiken we een <strong className="text-foreground">range 60% tot 70%</strong> 
+              van de niet-kopers als potentiële verkopers.
             </li>
             <li>
-              <strong className="text-foreground">Overlap waarschuwing</strong> — Database en plaatsbezoeken kunnen overlappen. Tel ze niet op.
+              <strong className="text-foreground">Overlap waarschuwing</strong> — 
+              Database en plaatsbezoeken kunnen overlappen. Tel ze niet op tot één totaal.
             </li>
           </ul>
         </section>
 
-        {/* Section C: Core Calculations */}
+        {/* Section D: Core Calculations */}
         <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">
-            C. Kernberekeningen
+            D. Kernberekeningen
           </h2>
 
           <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Manueel vs Colibry</h3>
           <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
             <pre className="text-foreground">{`manualCoverage = manualFollowUpPercent / 100
-colibryCoverage = 1.0  // 100%
+colibryCoverage = 1.0  // 100% (maar effectief bereik daalt door dropoff)
 conversionRate = conversionRatePercent / 100`}</pre>
           </div>
 
@@ -110,7 +133,7 @@ dbDealsManual = dbWarmManual × conversionRate
 dbWarmColibry = dbSellers × colibryCoverage
 dbDealsColibry = dbWarmColibry × conversionRate
 
-// Delta
+// Delta = Gemist potentieel
 extraDealsDb = dbDealsColibry - dbDealsManual`}</pre>
           </div>
 
@@ -120,23 +143,25 @@ extraDealsDb = dbDealsColibry - dbDealsManual`}</pre>
 salesPerMonth = sales12m / 12
 nonBuyersPerMonth = max(visitsPerMonth - salesPerMonth, 0)
 
+// Range 60-70% zijn potentiële verkopers
 visitSellersMonthLow = nonBuyersPerMonth × 0.60
 visitSellersMonthHigh = nonBuyersPerMonth × 0.70
 
 // Per scenario (manual of colibry)
 warmContacts = visitSellersYear × coverage
-deals = warmContacts × conversionRate
-revenue = deals × avgSalePrice × commissionPercent`}</pre>
+extraDeals = warmContacts × conversionRate
+revenue = extraDeals × avgSalePrice × commissionPercent`}</pre>
           </div>
         </section>
 
-        {/* Section D: Ramp-up */}
+        {/* Section E: Ramp-up */}
         <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">
-            D. Inloop en omzet na 12 en 24 maanden
+            E. Inloop (ramp-up)
           </h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Het effect van automatische opvolging bouwt geleidelijk op. We rekenen daarom met maandfactoren die bepalen hoeveel van het steady-state effect je in elke maand realiseert.
+            Het effect van automatische opvolging bouwt geleidelijk op. We rekenen daarom met 
+            maandfactoren die bepalen hoeveel van het steady-state effect je in elke maand realiseert.
           </p>
 
           <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Ramp-factor per maand m</h3>
@@ -149,23 +174,64 @@ Anders:
   rampFactor(m) = 1 / (1 + exp(-k × (m - rampMonths)))`}</pre>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Met deze keuze ligt de overgang van ongeveer 10% naar 90% effect over ongeveer rampMonths maanden, met het middenpunt op rampMonths.
+            Met deze keuze ligt de overgang van ongeveer 10% naar 90% effect over ongeveer rampMonths maanden, 
+            met het middenpunt (50%) op rampMonths.
           </p>
 
           <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Cumulatieve omzet</h3>
           <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
             <pre className="text-foreground">{`monthlySteady = revenueYearSteady / 12
 
+// Manueel (zonder dropoff)
 revenue12m = sum(m=1..12) monthlySteady × rampFactor(m)
-revenue24m = sum(m=1..24) monthlySteady × rampFactor(m)
+
+// Colibry (met dropoff)
+revenue12m = sum(m=1..12) monthlySteady × rampFactor(m) × effectiveFactor(m)
+
+revenue24m = sum(m=1..24) ...
 year2Only = revenue24m - revenue12m`}</pre>
           </div>
         </section>
 
-        {/* Section E: Disclaimer */}
+        {/* Section F: Deliverability & Drop-off */}
+        <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            F. Deliverability & drop-off
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Colibry = 100% nurture, maar het effectieve bereik daalt licht door bounces en uitschrijvingen.
+            Dit model past alleen op het Colibry scenario (manueel is niet "email-heavy").
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-4 mb-2">Model</h3>
+          <div className="bg-secondary/30 rounded-md p-4 font-mono text-sm overflow-x-auto">
+            <pre className="text-foreground">{`deliveredFactor = 1 - bounceRate
+
+// Retentie daalt exponentieel door unsubs
+retention(m) = (1 - unsubPerEmail)^(emailsPerMonth × m)
+
+effectiveFactor(m) = deliveredFactor × retention(m)`}</pre>
+          </div>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Waarom geen open rates?</h3>
+          <p className="text-sm text-muted-foreground">
+            Open rates zijn onbetrouwbaar door privacy-maatregelen (Apple Mail Privacy Protection, etc.) 
+            en meten niet of iemand je mail ontvangt of leest. Bounces en unsubs zijn objectief meetbaar 
+            en beïnvloeden direct het bereik.
+          </p>
+
+          <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Defaults</h3>
+          <ul className="text-sm text-muted-foreground list-disc list-inside">
+            <li>Bounce rate: 2,33%</li>
+            <li>Uitschrijving per mail: 0,20%</li>
+            <li>E-mails per maand: 2 (instelbaar 0-8)</li>
+          </ul>
+        </section>
+
+        {/* Section G: Disclaimer */}
         <section className="bg-card rounded-lg p-6 shadow-sm border border-border mb-8">
           <h2 className="text-xl font-semibold text-foreground mb-4">
-            E. Disclaimer
+            G. Disclaimer
           </h2>
           <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
             <li>
@@ -173,6 +239,10 @@ year2Only = revenue24m - revenue12m`}</pre>
             </li>
             <li>
               Database en plaatsbezoeken kunnen overlappen. Tel ze niet blind op.
+            </li>
+            <li>
+              Acquisitiecontext (29,5% mandaten met voorafgaand bezoek, 173 gesprekken/jaar) 
+              is enkel referentie-informatie uit de originele businesscase.
             </li>
           </ul>
         </section>

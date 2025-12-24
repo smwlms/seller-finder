@@ -30,7 +30,25 @@ export function rampFactor(month: number, rampMonths: number): number {
 }
 
 /**
- * Calculate cumulative revenue over a period with ramp-up
+ * Calculate email retention factor for a given month
+ * Accounts for bounces and unsubs over time (Colibry only)
+ * deliveredFactor = 1 - bounceRate
+ * retention(m) = (1 - unsubPerEmail)^(emailsPerMonth * m)
+ * effectiveFactor(m) = deliveredFactor * retention(m)
+ */
+export function effectiveFactor(
+  month: number,
+  bounceRate: number,
+  unsubPerEmail: number,
+  emailsPerMonth: number
+): number {
+  const deliveredFactor = 1 - bounceRate;
+  const retention = Math.pow(1 - unsubPerEmail, emailsPerMonth * month);
+  return deliveredFactor * retention;
+}
+
+/**
+ * Calculate cumulative revenue over a period with ramp-up (manual scenario, no dropoff)
  */
 export function calculateCumulativeRevenue(
   monthlySteady: number,
@@ -40,6 +58,26 @@ export function calculateCumulativeRevenue(
   let cumulative = 0;
   for (let m = 1; m <= months; m++) {
     cumulative += monthlySteady * rampFactor(m, rampMonths);
+  }
+  return cumulative;
+}
+
+/**
+ * Calculate cumulative revenue with ramp-up AND drop-off (Colibry scenario)
+ */
+export function calculateCumulativeRevenueWithDropoff(
+  monthlySteady: number,
+  months: number,
+  rampMonths: number,
+  bounceRate: number,
+  unsubPerEmail: number,
+  emailsPerMonth: number
+): number {
+  let cumulative = 0;
+  for (let m = 1; m <= months; m++) {
+    const ramp = rampFactor(m, rampMonths);
+    const eff = effectiveFactor(m, bounceRate, unsubPerEmail, emailsPerMonth);
+    cumulative += monthlySteady * ramp * eff;
   }
   return cumulative;
 }
@@ -58,6 +96,13 @@ export interface CalculatorInputs {
   commissionPercent: number;
   conversionRatePercent: number;
   rampMonths: number;
+  // Deliverability & drop-off
+  bounceRate: number; // as decimal (0.0233 = 2.33%)
+  unsubPerEmail: number; // as decimal (0.002 = 0.20%)
+  emailsPerMonth: number;
+  // Acquisition context (for details/uitleg only)
+  acquisitionConversationsPerYear: number;
+  shareMandatesWithPriorVisit: number;
 }
 
 // Default values
@@ -73,6 +118,13 @@ export const DEFAULT_INPUTS: CalculatorInputs = {
   commissionPercent: 2.78,
   conversionRatePercent: 2,
   rampMonths: 5,
+  // Deliverability
+  bounceRate: 0.0233, // 2.33%
+  unsubPerEmail: 0.002, // 0.20%
+  emailsPerMonth: 2,
+  // Acquisition context
+  acquisitionConversationsPerYear: 173,
+  shareMandatesWithPriorVisit: 0.295, // 29.5%
 };
 
 // Database calculation results
@@ -85,7 +137,7 @@ export interface DatabaseResults {
   revenueDb12mManual: number;
   revenueDb24mManual: number;
   revenueDbYear2OnlyManual: number;
-  // Colibry scenario
+  // Colibry scenario (with dropoff)
   dbWarmColibry: number;
   dbDealsColibry: number;
   revenueDbYearSteadyColibry: number;
@@ -98,6 +150,9 @@ export interface DatabaseResults {
   extraRevenueDb12m: number;
   extraRevenueDb24m: number;
   extraRevenueDbYear2Only: number;
+  // Dropoff context
+  effectiveReach12m: number; // average effective factor over 12 months
+  effectiveReach24m: number;
 }
 
 // Visits calculation results (with range)
@@ -124,7 +179,7 @@ export interface VisitsResults {
   revenueVisit24mManualHigh: number;
   revenueVisitYear2OnlyManualLow: number;
   revenueVisitYear2OnlyManualHigh: number;
-  // Colibry scenario
+  // Colibry scenario (with dropoff)
   visitWarmColibryLow: number;
   visitWarmColibryHigh: number;
   visitDealsColibryLow: number;
@@ -150,6 +205,12 @@ export interface VisitsResults {
   extraRevenueVisitYear2OnlyHigh: number;
 }
 
+// Acquisition context results (for details/uitleg)
+export interface AcquisitionContext {
+  baselineMandatesFromVisits: number;
+  closeRateOnceConversation: number;
+}
+
 /**
  * Get normalized visits and sales (always yearly values)
  */
@@ -167,7 +228,24 @@ function normalizeInputs(inputs: CalculatorInputs): { visits12m: number; sales12
 }
 
 /**
+ * Calculate average effective factor over a period
+ */
+function calculateAverageEffectiveFactor(
+  months: number,
+  bounceRate: number,
+  unsubPerEmail: number,
+  emailsPerMonth: number
+): number {
+  let sum = 0;
+  for (let m = 1; m <= months; m++) {
+    sum += effectiveFactor(m, bounceRate, unsubPerEmail, emailsPerMonth);
+  }
+  return sum / months;
+}
+
+/**
  * Calculate database potential with Manual vs Colibry scenarios
+ * Colibry includes dropoff from bounces/unsubs
  */
 export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResults {
   const ownershipDecimal = inputs.ownershipRate / 100;
@@ -178,7 +256,7 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
 
   const dbSellers = inputs.dbBuyers * ownershipDecimal;
 
-  // Manual scenario
+  // Manual scenario (no dropoff)
   const dbWarmManual = dbSellers * manualCoverage;
   const dbDealsManual = dbWarmManual * conversionRate;
   const revenueDbYearSteadyManual = dbDealsManual * inputs.avgSalePrice * commissionDecimal;
@@ -187,13 +265,21 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
   const revenueDb24mManual = calculateCumulativeRevenue(monthlyDbSteadyManual, 24, inputs.rampMonths);
   const revenueDbYear2OnlyManual = revenueDb24mManual - revenueDb12mManual;
 
-  // Colibry scenario
+  // Colibry scenario (with dropoff)
   const dbWarmColibry = dbSellers * colibryCoverage;
   const dbDealsColibry = dbWarmColibry * conversionRate;
   const revenueDbYearSteadyColibry = dbDealsColibry * inputs.avgSalePrice * commissionDecimal;
   const monthlyDbSteadyColibry = revenueDbYearSteadyColibry / 12;
-  const revenueDb12mColibry = calculateCumulativeRevenue(monthlyDbSteadyColibry, 12, inputs.rampMonths);
-  const revenueDb24mColibry = calculateCumulativeRevenue(monthlyDbSteadyColibry, 24, inputs.rampMonths);
+  
+  // Apply dropoff to Colibry cumulative revenue
+  const revenueDb12mColibry = calculateCumulativeRevenueWithDropoff(
+    monthlyDbSteadyColibry, 12, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const revenueDb24mColibry = calculateCumulativeRevenueWithDropoff(
+    monthlyDbSteadyColibry, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
   const revenueDbYear2OnlyColibry = revenueDb24mColibry - revenueDb12mColibry;
 
   // Delta
@@ -202,6 +288,10 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
   const extraRevenueDb12m = revenueDb12mColibry - revenueDb12mManual;
   const extraRevenueDb24m = revenueDb24mColibry - revenueDb24mManual;
   const extraRevenueDbYear2Only = revenueDbYear2OnlyColibry - revenueDbYear2OnlyManual;
+
+  // Dropoff context
+  const effectiveReach12m = calculateAverageEffectiveFactor(12, inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth);
+  const effectiveReach24m = calculateAverageEffectiveFactor(24, inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth);
 
   return {
     dbSellers: Math.round(dbSellers),
@@ -222,11 +312,14 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
     extraRevenueDb12m,
     extraRevenueDb24m,
     extraRevenueDbYear2Only,
+    effectiveReach12m,
+    effectiveReach24m,
   };
 }
 
 /**
  * Calculate visits potential with 60-70% range and Manual vs Colibry scenarios
+ * Colibry includes dropoff from bounces/unsubs
  */
 export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults {
   const { visits12m, sales12m } = normalizeInputs(inputs);
@@ -249,7 +342,7 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
   const visitSellersPerDayLow = visitSellersMonthLow / inputs.workdaysPerMonth;
   const visitSellersPerDayHigh = visitSellersMonthHigh / inputs.workdaysPerMonth;
 
-  // Manual scenario
+  // Manual scenario (no dropoff)
   const visitWarmManualLow = visitSellersYearLow * manualCoverage;
   const visitWarmManualHigh = visitSellersYearHigh * manualCoverage;
   const visitDealsManualLow = visitWarmManualLow * conversionRate;
@@ -265,7 +358,7 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
   const revenueVisitYear2OnlyManualLow = revenueVisit24mManualLow - revenueVisit12mManualLow;
   const revenueVisitYear2OnlyManualHigh = revenueVisit24mManualHigh - revenueVisit12mManualHigh;
 
-  // Colibry scenario
+  // Colibry scenario (with dropoff)
   const visitWarmColibryLow = visitSellersYearLow * colibryCoverage;
   const visitWarmColibryHigh = visitSellersYearHigh * colibryCoverage;
   const visitDealsColibryLow = visitWarmColibryLow * conversionRate;
@@ -274,10 +367,24 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
   const revenueVisitYearSteadyColibryHigh = visitDealsColibryHigh * inputs.avgSalePrice * commissionDecimal;
   const monthlyColibryLow = revenueVisitYearSteadyColibryLow / 12;
   const monthlyColibryHigh = revenueVisitYearSteadyColibryHigh / 12;
-  const revenueVisit12mColibryLow = calculateCumulativeRevenue(monthlyColibryLow, 12, inputs.rampMonths);
-  const revenueVisit12mColibryHigh = calculateCumulativeRevenue(monthlyColibryHigh, 12, inputs.rampMonths);
-  const revenueVisit24mColibryLow = calculateCumulativeRevenue(monthlyColibryLow, 24, inputs.rampMonths);
-  const revenueVisit24mColibryHigh = calculateCumulativeRevenue(monthlyColibryHigh, 24, inputs.rampMonths);
+  
+  // Apply dropoff to Colibry cumulative revenue
+  const revenueVisit12mColibryLow = calculateCumulativeRevenueWithDropoff(
+    monthlyColibryLow, 12, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const revenueVisit12mColibryHigh = calculateCumulativeRevenueWithDropoff(
+    monthlyColibryHigh, 12, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const revenueVisit24mColibryLow = calculateCumulativeRevenueWithDropoff(
+    monthlyColibryLow, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const revenueVisit24mColibryHigh = calculateCumulativeRevenueWithDropoff(
+    monthlyColibryHigh, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
   const revenueVisitYear2OnlyColibryLow = revenueVisit24mColibryLow - revenueVisit12mColibryLow;
   const revenueVisitYear2OnlyColibryHigh = revenueVisit24mColibryHigh - revenueVisit12mColibryHigh;
 
@@ -341,6 +448,21 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
 }
 
 /**
+ * Calculate acquisition context metrics (for details/uitleg only)
+ */
+export function calculateAcquisitionContext(inputs: CalculatorInputs): AcquisitionContext {
+  const { sales12m } = normalizeInputs(inputs);
+  
+  const baselineMandatesFromVisits = sales12m * inputs.shareMandatesWithPriorVisit;
+  const closeRateOnceConversation = sales12m / inputs.acquisitionConversationsPerYear;
+  
+  return {
+    baselineMandatesFromVisits,
+    closeRateOnceConversation,
+  };
+}
+
+/**
  * ViewModel for UI - separates "above the fold" from "details"
  */
 export interface CalculatorViewModel {
@@ -353,7 +475,17 @@ export interface CalculatorViewModel {
     extraDealsDb: number;
     extraDealsVisitLow: number;
     extraDealsVisitHigh: number;
+    // Revenue over time (Colibry scenario)
+    extraRevenueDb12m: number;
+    extraRevenueDbYear2Only: number;
+    extraRevenueDb24m: number;
     extraRevenueDbYearSteady: number;
+    extraRevenueVisit12mLow: number;
+    extraRevenueVisit12mHigh: number;
+    extraRevenueVisitYear2OnlyLow: number;
+    extraRevenueVisitYear2OnlyHigh: number;
+    extraRevenueVisit24mLow: number;
+    extraRevenueVisit24mHigh: number;
     extraRevenueVisitYearSteadyLow: number;
     extraRevenueVisitYearSteadyHigh: number;
   };
@@ -362,8 +494,10 @@ export interface CalculatorViewModel {
   detailOutputs: {
     database: DatabaseResults;
     visits: VisitsResults;
+    acquisitionContext: AcquisitionContext;
   };
   rampMonths: number;
+  inputs: CalculatorInputs;
 }
 
 /**
@@ -374,6 +508,8 @@ export function buildViewModel(
   dbResults: DatabaseResults,
   visitsResults: VisitsResults
 ): CalculatorViewModel {
+  const acquisitionContext = calculateAcquisitionContext(inputs);
+  
   return {
     heroCopy: {
       title: "De vergeten verkoper",
@@ -384,17 +520,28 @@ export function buildViewModel(
       extraDealsDb: dbResults.extraDealsDb,
       extraDealsVisitLow: visitsResults.extraDealsVisitLow,
       extraDealsVisitHigh: visitsResults.extraDealsVisitHigh,
+      extraRevenueDb12m: dbResults.extraRevenueDb12m,
+      extraRevenueDbYear2Only: dbResults.extraRevenueDbYear2Only,
+      extraRevenueDb24m: dbResults.extraRevenueDb24m,
       extraRevenueDbYearSteady: dbResults.extraRevenueDbYearSteady,
+      extraRevenueVisit12mLow: visitsResults.extraRevenueVisit12mLow,
+      extraRevenueVisit12mHigh: visitsResults.extraRevenueVisit12mHigh,
+      extraRevenueVisitYear2OnlyLow: visitsResults.extraRevenueVisitYear2OnlyLow,
+      extraRevenueVisitYear2OnlyHigh: visitsResults.extraRevenueVisitYear2OnlyHigh,
+      extraRevenueVisit24mLow: visitsResults.extraRevenueVisit24mLow,
+      extraRevenueVisit24mHigh: visitsResults.extraRevenueVisit24mHigh,
       extraRevenueVisitYearSteadyLow: visitsResults.extraRevenueVisitYearSteadyLow,
       extraRevenueVisitYearSteadyHigh: visitsResults.extraRevenueVisitYearSteadyHigh,
     },
-    transparencyText: `Colibry volgt 100% op. Conversieratio blijft dezelfde (${inputs.conversionRatePercent}%); het verschil komt door bereik.`,
-    overlapWarning: "Tel deze bedragen niet op wegens mogelijke overlap tussen database en bezoekersstroom.",
+    transparencyText: `Colibry volgt 100% op. Extra succesratio blijft ${inputs.conversionRatePercent}%; het verschil komt door bereik.`,
+    overlapWarning: "Tel database en plaatsbezoeken niet op (mogelijke overlap).",
     detailOutputs: {
       database: dbResults,
       visits: visitsResults,
+      acquisitionContext,
     },
     rampMonths: inputs.rampMonths,
+    inputs,
   };
 }
 
@@ -421,6 +568,10 @@ export function buildCtaUrl(
     avgSalePrice: String(inputs.avgSalePrice),
     commissionPercent: String(inputs.commissionPercent),
     rampMonths: String(inputs.rampMonths),
+    // Dropoff settings
+    bounceRate: String(inputs.bounceRate),
+    unsubPerEmail: String(inputs.unsubPerEmail),
+    emailsPerMonth: String(inputs.emailsPerMonth),
     // Database delta outputs
     extraDealsDb: String(dbResults.extraDealsDb),
     extraRevenueDbYearSteady: String(Math.round(dbResults.extraRevenueDbYearSteady)),
