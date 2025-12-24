@@ -36,7 +36,7 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
             onChange={(e) => updateInput("dbBuyers", parseInt(e.target.value) || 0)}
           />
           <p className="text-xs text-muted-foreground">
-            Zoekfiche ≤12 maanden, budget ≥ €350k
+            Enkel contacten met een zoekfiche, niet ouder dan 12 maanden, en budget ≥ €350.000.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
               Manuele opvolging: {inputs.manualFollowUpPercent}%
             </Label>
             <Badge variant="secondary" className="text-xs font-normal">
-              Colibry: 100%
+              Colibry: 100% nurture
             </Badge>
           </div>
           <Slider
@@ -107,7 +107,7 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
             className="py-2"
           />
           <p className="text-xs text-muted-foreground">
-            Hoeveel % kan je vandaag manueel opvolgen?
+            Hoeveel % kan je vandaag manueel opvolgen? (beperkt door tijd/capaciteit)
           </p>
         </div>
       </div>
