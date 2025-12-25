@@ -95,21 +95,21 @@ const SettingsCollapsible = ({ inputs, onChange }: SettingsCollapsibleProps) => 
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="conversionRatePercent" className="text-xs">
-                  Extra succesratio nurture (%)
+                <Label htmlFor="upliftRatePercent" className="text-xs">
+                  Extra uplift door nurture (%)
                 </Label>
                 <Input
-                  id="conversionRatePercent"
+                  id="upliftRatePercent"
                   type="number"
                   min={0}
                   max={100}
                   step={0.1}
-                  value={inputs.conversionRatePercent}
-                  onChange={(e) => updateInput("conversionRatePercent", parseFloat(e.target.value) || 2)}
+                  value={inputs.upliftRatePercent}
+                  onChange={(e) => updateInput("upliftRatePercent", parseFloat(e.target.value) || 2)}
                   className="h-8"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Welk % levert extra mandaten op door consistente opvolging
+                  Incrementeel: % extra mandaten op de extra reach dankzij nurture
                 </p>
               </div>
 
@@ -187,9 +187,6 @@ const SettingsCollapsible = ({ inputs, onChange }: SettingsCollapsibleProps) => 
             <h4 className="text-xs font-medium text-muted-foreground uppercase mb-3">
               Acquisitiecontext (enkel voor kalibratie)
             </h4>
-            <p className="text-[10px] text-muted-foreground mb-3">
-              Referentiecijfers uit de businesscase. Beïnvloedt niet de kernberekening.
-            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="acquisitionConversationsPerYear" className="text-xs">
@@ -231,7 +228,7 @@ const SettingsCollapsible = ({ inputs, onChange }: SettingsCollapsibleProps) => 
             className="flex items-center gap-1 text-xs text-primary hover:underline"
           >
             <RotateCcw className="h-3 w-3" />
-            Reset naar voorbeeld
+            Reset naar businesscase presets
           </button>
         </div>
       </CollapsibleContent>

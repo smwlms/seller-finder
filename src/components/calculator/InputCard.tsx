@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Info } from "lucide-react";
 import { CalculatorInputs } from "@/lib/calculations";
 
 interface InputCardProps {
@@ -43,7 +44,7 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
         {/* Visits & Sales with inline unit toggle */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium">Plaatsbezoeken & verkopen</Label>
+            <Label className="text-sm font-medium">Plaatsbezoeken & mandaten</Label>
             <Select
               value={inputs.periodUnit}
               onValueChange={(value: 'year' | 'month') => updateInput("periodUnit", value)}
@@ -60,9 +61,12 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
           
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="visits12m" className="text-xs text-muted-foreground">
-                Bezoeken{periodLabel}
-              </Label>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="visits12m" className="text-xs text-muted-foreground">
+                  VISIT tasks{periodLabel}
+                </Label>
+                <Info className="h-3 w-3 text-muted-foreground" />
+              </div>
               <Input
                 id="visits12m"
                 type="number"
@@ -71,10 +75,11 @@ const InputCard = ({ inputs, onChange }: InputCardProps) => {
                 onChange={(e) => updateInput("visits12m", parseInt(e.target.value) || 0)}
                 className="mt-1"
               />
+              <p className="text-[10px] text-muted-foreground mt-0.5">Ruw, niet uniek</p>
             </div>
             <div>
               <Label htmlFor="sales12m" className="text-xs text-muted-foreground">
-                Verkopen{periodLabel}
+                Mandaten{periodLabel}
               </Label>
               <Input
                 id="sales12m"
