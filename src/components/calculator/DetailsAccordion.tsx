@@ -1,6 +1,6 @@
 import { CalculatorViewModel, formatEuro, formatNumber } from "@/lib/calculations";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 interface DetailsAccordionProps {
@@ -40,59 +40,53 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
               {/* Pool */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-secondary/50 rounded-md p-3">
-                  <p className="text-xs text-muted-foreground">Potentiële verkopers</p>
+                  <p className="text-xs text-muted-foreground">Potentiële verkopers (pool)</p>
                   <p className="text-lg font-bold text-foreground">{formatNumber(database.dbSellers)}</p>
-                  <p className="text-[10px] text-muted-foreground">= kandidaat-kopers × {inputs.ownershipRate}%</p>
+                  <p className="text-[10px] text-muted-foreground">= {formatNumber(inputs.dbBuyers)} × {inputs.ownershipRate}%</p>
                 </div>
                 <div className="bg-secondary/50 rounded-md p-3">
-                  <p className="text-xs text-muted-foreground">Effectief bereik (gem.)</p>
+                  <p className="text-xs text-muted-foreground">Colibry effectief bereik</p>
                   <p className="text-lg font-bold text-foreground">
-                    {formatPercent(database.effectiveReach12m)}
+                    {formatPercent(database.colibryEffectiveCoverageSteady)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">na 12m (incl. dropoff)</p>
+                  <p className="text-[10px] text-muted-foreground">steady-state (na dropoff)</p>
                 </div>
               </div>
 
-              {/* Comparison: Manual vs Colibry */}
+              {/* Incremental uplift breakdown */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Manueel vs Colibry</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase">Extra reach & uplift</h4>
                 <div className="grid gap-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bereik (contacten):</span>
-                    <span className="text-foreground">
-                      {formatNumber(database.dbWarmManual)} vs {formatNumber(database.dbWarmColibry)}
-                    </span>
+                    <span className="text-muted-foreground">Manueel bereik:</span>
+                    <span className="text-foreground">{inputs.manualFollowUpPercent}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Extra mandaten:</span>
-                    <span className="text-foreground">
-                      {formatNumber(database.dbDealsManual)} vs {formatNumber(database.dbDealsColibry)}
-                    </span>
+                    <span className="text-muted-foreground">Extra reach (Colibry - manueel):</span>
+                    <span className="font-medium text-foreground">{formatNumber(database.extraReachDb)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Omzet steady-state:</span>
-                    <span className="text-foreground">
-                      {formatEuro(database.revenueDbYearSteadyManual)} vs {formatEuro(database.revenueDbYearSteadyColibry)}
-                    </span>
+                    <span className="text-muted-foreground">Extra mandaten ({inputs.upliftRatePercent}% uplift):</span>
+                    <span className="font-medium text-primary">{formatNumber(database.extraMandatesDb)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Full revenue timeline */}
+              {/* Revenue over time */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Colibry omzet over tijd</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase">Extra omzet over tijd</h4>
                 <div className="grid gap-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cumulatief 12m:</span>
-                    <span className="font-medium text-foreground">{formatEuro(database.revenueDb12mColibry)}</span>
+                    <span className="font-medium text-foreground">{formatEuro(database.extraRevenueDb12m)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Alleen jaar 2:</span>
-                    <span className="font-medium text-foreground">{formatEuro(database.revenueDbYear2OnlyColibry)}</span>
+                    <span className="font-medium text-foreground">{formatEuro(database.extraRevenueDbYear2Only)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cumulatief 24m:</span>
-                    <span className="font-medium text-foreground">{formatEuro(database.revenueDb24mColibry)}</span>
+                    <span className="font-medium text-foreground">{formatEuro(database.extraRevenueDb24m)}</span>
                   </div>
                 </div>
               </div>
@@ -110,6 +104,17 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+              {/* Data quality warning for tasks mode */}
+              {visits.isTasksMode && (
+                <div className="flex items-start gap-2 p-2 bg-accent/10 rounded-md border border-accent/20">
+                  <AlertCircle className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    <strong className="text-foreground">Data-kwaliteit:</strong> Berekening op basis van VISIT tasks (ruw). 
+                    Dit zijn geen unieke bezoekers. 60–70% heuristiek toegepast.
+                  </p>
+                </div>
+              )}
+
               {/* Baseline status */}
               <div className="bg-secondary/30 rounded-md p-3 space-y-1">
                 <h4 className="text-xs font-medium text-foreground">Vandaag-status (baseline)</h4>
@@ -119,9 +124,9 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
                 </p>
               </div>
 
-              {/* Pool metrics with untapped */}
+              {/* Pool metrics */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Stille verkopers (pool)</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase">Potentiële verkopers (pool)</h4>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-secondary/50 rounded-md p-2">
                     <p className="text-xs text-muted-foreground">Per dag</p>
@@ -144,56 +149,45 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
                 </div>
               </div>
 
-              {/* Untapped pool */}
-              <div className="bg-primary/5 rounded-md p-3 border border-primary/20">
-                <h4 className="text-xs font-medium text-foreground mb-1">Untapped pool (wat nog op tafel ligt)</h4>
-                <p className="text-lg font-bold text-primary">
-                  {formatRange(visits.untappedSellersYearLow, visits.untappedSellersYearHigh)}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  = stille verkopers − baseline mandaten uit eerdere contacten
-                </p>
-              </div>
-
-              {/* Comparison: Manual vs Colibry */}
+              {/* Incremental uplift breakdown */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Manueel vs Colibry</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase">Extra reach & uplift</h4>
                 <div className="grid gap-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Bereik (contacten):</span>
-                    <span className="text-foreground">
-                      {formatRange(visits.visitWarmManualLow, visits.visitWarmManualHigh)} vs {formatRange(visits.visitWarmColibryLow, visits.visitWarmColibryHigh)}
+                    <span className="text-muted-foreground">Extra reach (Colibry - manueel):</span>
+                    <span className="font-medium text-foreground">
+                      {formatRange(visits.extraReachVisitLow, visits.extraReachVisitHigh)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Extra mandaten:</span>
-                    <span className="text-foreground">
-                      {formatRange(visits.visitDealsManualLow, visits.visitDealsManualHigh)} vs {formatRange(visits.visitDealsColibryLow, visits.visitDealsColibryHigh)}
+                    <span className="text-muted-foreground">Extra mandaten ({inputs.upliftRatePercent}% uplift):</span>
+                    <span className="font-medium text-primary">
+                      {formatRange(visits.extraMandatesVisitLow, visits.extraMandatesVisitHigh)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Full revenue timeline */}
+              {/* Revenue over time */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase">Colibry omzet over tijd</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase">Extra omzet over tijd</h4>
                 <div className="grid gap-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cumulatief 12m:</span>
                     <span className="font-medium text-foreground">
-                      {formatEuroRange(visits.revenueVisit12mColibryLow, visits.revenueVisit12mColibryHigh)}
+                      {formatEuroRange(visits.extraRevenueVisit12mLow, visits.extraRevenueVisit12mHigh)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Alleen jaar 2:</span>
                     <span className="font-medium text-foreground">
-                      {formatEuroRange(visits.revenueVisitYear2OnlyColibryLow, visits.revenueVisitYear2OnlyColibryHigh)}
+                      {formatEuroRange(visits.extraRevenueVisitYear2OnlyLow, visits.extraRevenueVisitYear2OnlyHigh)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cumulatief 24m:</span>
                     <span className="font-medium text-foreground">
-                      {formatEuroRange(visits.revenueVisit24mColibryLow, visits.revenueVisit24mColibryHigh)}
+                      {formatEuroRange(visits.extraRevenueVisit24mLow, visits.extraRevenueVisit24mHigh)}
                     </span>
                   </div>
                 </div>
@@ -211,9 +205,6 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
                     <span>Close rate na gesprek:</span>
                     <span>{(acquisitionContext.closeRateOnceConversation * 100).toFixed(1)}%</span>
                   </div>
-                  <p className="text-[10px] mt-1">
-                    Referentiecijfers uit businesscase ({baselineStatus.baselinePercentFormatted} van mandaten had voorafgaand bezoek).
-                  </p>
                 </div>
               </div>
             </div>
@@ -223,7 +214,7 @@ const DetailsAccordion = ({ viewModel }: DetailsAccordionProps) => {
 
       {/* Ramp-up note */}
       <p className="text-xs text-muted-foreground text-center">
-        Deze omzet bouwt geleidelijk op. We rekenen met {rampMonths} maanden tot 50% effect.
+        Omzet bouwt geleidelijk op ({rampMonths} maanden tot 50% effect).
         Colibry bereik daalt licht door bounces ({(inputs.bounceRate * 100).toFixed(1)}%) en uitschrijvingen.
       </p>
     </div>

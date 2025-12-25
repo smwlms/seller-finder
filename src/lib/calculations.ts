@@ -94,7 +94,7 @@ export interface CalculatorInputs {
   ownershipRate: number;
   avgSalePrice: number;
   commissionPercent: number;
-  conversionRatePercent: number;
+  upliftRatePercent: number; // RENAMED: incremental uplift on extra reach
   rampMonths: number;
   // Deliverability & drop-off
   bounceRate: number; // as decimal (0.0233 = 2.33%)
@@ -103,20 +103,27 @@ export interface CalculatorInputs {
   // Acquisition context (for details/uitleg only)
   acquisitionConversationsPerYear: number;
   shareMandatesWithPriorVisit: number; // baseline: 29.5% of mandates came from prior contact
+  // Visits input mode
+  visitsInputMode: 'tasks' | 'unique_contacts';
+  // Unique visitors inputs (for unique_contacts mode)
+  uniqueVisitors12mLower: number;
+  uniqueVisitors12mUpper: number;
+  ownerShareAmongVisitorsLow: number;
+  ownerShareAmongVisitorsHigh: number;
 }
 
-// Default values
+// Default values - BUSINESSCASE PRESETS
 export const DEFAULT_INPUTS: CalculatorInputs = {
-  dbBuyers: 3648,
-  visits12m: 1900,
-  sales12m: 95,
+  dbBuyers: 1109, // Unieke contacten met zoekfiche ≤12m, budget ≥350k
+  visits12m: 2081, // VISIT tasks totaal in 12m (ruw, niet uniek)
+  sales12m: 95, // Mandaten/jaar
   periodUnit: 'year',
   manualFollowUpPercent: 2,
   workdaysPerMonth: 22,
   ownershipRate: 71,
   avgSalePrice: 367000,
   commissionPercent: 2.78,
-  conversionRatePercent: 2,
+  upliftRatePercent: 2, // RENAMED: 2% incremental uplift on extra reach
   rampMonths: 5,
   // Deliverability
   bounceRate: 0.0233, // 2.33%
@@ -125,6 +132,13 @@ export const DEFAULT_INPUTS: CalculatorInputs = {
   // Acquisition context
   acquisitionConversationsPerYear: 173,
   shareMandatesWithPriorVisit: 0.295, // 29.5%
+  // Visits input mode
+  visitsInputMode: 'tasks',
+  // Unique visitors (prepared for BigQuery data)
+  uniqueVisitors12mLower: 0,
+  uniqueVisitors12mUpper: 0,
+  ownerShareAmongVisitorsLow: 0.60,
+  ownerShareAmongVisitorsHigh: 0.70,
 };
 
 // Baseline status results (what you have today without Colibry)
@@ -135,25 +149,14 @@ export interface BaselineStatus {
   baselinePercentFormatted: string; // "29,5%"
 }
 
-// Database calculation results
+// Database calculation results - UPDATED FOR INCREMENTAL UPLIFT MODEL
 export interface DatabaseResults {
   dbSellers: number;
-  // Manual scenario
-  dbWarmManual: number;
-  dbDealsManual: number;
-  revenueDbYearSteadyManual: number;
-  revenueDb12mManual: number;
-  revenueDb24mManual: number;
-  revenueDbYear2OnlyManual: number;
-  // Colibry scenario (with dropoff)
-  dbWarmColibry: number;
-  dbDealsColibry: number;
-  revenueDbYearSteadyColibry: number;
-  revenueDb12mColibry: number;
-  revenueDb24mColibry: number;
-  revenueDbYear2OnlyColibry: number;
-  // Delta (Colibry - Manual)
-  extraDealsDb: number;
+  // Extra reach = pool × (colibryEffectiveCoverage - manualCoverage)
+  extraReachDb: number;
+  // Extra mandates = extraReach × upliftRate
+  extraMandatesDb: number;
+  // Revenue from extra mandates
   extraRevenueDbYearSteady: number;
   extraRevenueDb12m: number;
   extraRevenueDb24m: number;
@@ -161,51 +164,30 @@ export interface DatabaseResults {
   // Dropoff context
   effectiveReach12m: number; // average effective factor over 12 months
   effectiveReach24m: number;
+  colibryEffectiveCoverageSteady: number;
 }
 
-// Visits calculation results (with range)
+// Visits calculation results (with range) - UPDATED FOR INCREMENTAL UPLIFT MODEL
 export interface VisitsResults {
   visitsPerMonth: number;
   salesPerMonth: number;
   nonBuyersPerMonth: number;
+  // Pool of potential sellers (60-70% of non-buyers, OR from unique visitors)
   visitSellersMonthLow: number;
   visitSellersMonthHigh: number;
   visitSellersYearLow: number;
   visitSellersYearHigh: number;
   visitSellersPerDayLow: number;
   visitSellersPerDayHigh: number;
-  // Untapped pool (silent sellers - baseline)
-  untappedSellersYearLow: number;
-  untappedSellersYearHigh: number;
-  // Manual scenario
-  visitWarmManualLow: number;
-  visitWarmManualHigh: number;
-  visitDealsManualLow: number;
-  visitDealsManualHigh: number;
-  revenueVisitYearSteadyManualLow: number;
-  revenueVisitYearSteadyManualHigh: number;
-  revenueVisit12mManualLow: number;
-  revenueVisit12mManualHigh: number;
-  revenueVisit24mManualLow: number;
-  revenueVisit24mManualHigh: number;
-  revenueVisitYear2OnlyManualLow: number;
-  revenueVisitYear2OnlyManualHigh: number;
-  // Colibry scenario (with dropoff)
-  visitWarmColibryLow: number;
-  visitWarmColibryHigh: number;
-  visitDealsColibryLow: number;
-  visitDealsColibryHigh: number;
-  revenueVisitYearSteadyColibryLow: number;
-  revenueVisitYearSteadyColibryHigh: number;
-  revenueVisit12mColibryLow: number;
-  revenueVisit12mColibryHigh: number;
-  revenueVisit24mColibryLow: number;
-  revenueVisit24mColibryHigh: number;
-  revenueVisitYear2OnlyColibryLow: number;
-  revenueVisitYear2OnlyColibryHigh: number;
-  // Delta (Colibry - Manual)
-  extraDealsVisitLow: number;
-  extraDealsVisitHigh: number;
+  // Data quality indicator
+  isTasksMode: boolean;
+  // Extra reach = pool × (colibryEffectiveCoverage - manualCoverage)
+  extraReachVisitLow: number;
+  extraReachVisitHigh: number;
+  // Extra mandates = extraReach × upliftRate
+  extraMandatesVisitLow: number;
+  extraMandatesVisitHigh: number;
+  // Revenue from extra mandates
   extraRevenueVisitYearSteadyLow: number;
   extraRevenueVisitYearSteadyHigh: number;
   extraRevenueVisit12mLow: number;
@@ -257,7 +239,7 @@ export function calculateBaselineStatus(inputs: CalculatorInputs): BaselineStatu
 /**
  * Calculate average effective factor over a period
  */
-function calculateAverageEffectiveFactor(
+export function calculateAverageEffectiveFactor(
   months: number,
   bounceRate: number,
   unsubPerEmail: number,
@@ -271,50 +253,62 @@ function calculateAverageEffectiveFactor(
 }
 
 /**
- * Calculate database potential with Manual vs Colibry scenarios
- * Colibry includes dropoff from bounces/unsubs
+ * Calculate steady-state Colibry effective coverage
+ * Uses end-of-year-1 factor as approximation for steady state
+ */
+function calculateColibryEffectiveCoverageSteady(
+  bounceRate: number,
+  unsubPerEmail: number,
+  emailsPerMonth: number
+): number {
+  return effectiveFactor(12, bounceRate, unsubPerEmail, emailsPerMonth);
+}
+
+/**
+ * Calculate database potential with INCREMENTAL UPLIFT model
+ * 
+ * Key formula:
+ * extraReach = pool × (colibryEffectiveCoverage - manualCoverage)
+ * extraMandates = extraReach × upliftRate
+ * 
+ * The 2% is NOT an absolute conversion on pool, but incremental uplift
+ * on the EXTRA reach Colibry provides beyond manual capacity.
  */
 export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResults {
   const ownershipDecimal = inputs.ownershipRate / 100;
   const manualCoverage = inputs.manualFollowUpPercent / 100;
-  const colibryCoverage = 1.0; // 100%
-  const conversionRate = inputs.conversionRatePercent / 100;
+  const upliftRate = inputs.upliftRatePercent / 100;
   const commissionDecimal = inputs.commissionPercent / 100;
 
   const dbSellers = inputs.dbBuyers * ownershipDecimal;
-
-  // Manual scenario (no dropoff)
-  const dbWarmManual = dbSellers * manualCoverage;
-  const dbDealsManual = dbWarmManual * conversionRate;
-  const revenueDbYearSteadyManual = dbDealsManual * inputs.avgSalePrice * commissionDecimal;
-  const monthlyDbSteadyManual = revenueDbYearSteadyManual / 12;
-  const revenueDb12mManual = calculateCumulativeRevenue(monthlyDbSteadyManual, 12, inputs.rampMonths);
-  const revenueDb24mManual = calculateCumulativeRevenue(monthlyDbSteadyManual, 24, inputs.rampMonths);
-  const revenueDbYear2OnlyManual = revenueDb24mManual - revenueDb12mManual;
-
-  // Colibry scenario (with dropoff)
-  const dbWarmColibry = dbSellers * colibryCoverage;
-  const dbDealsColibry = dbWarmColibry * conversionRate;
-  const revenueDbYearSteadyColibry = dbDealsColibry * inputs.avgSalePrice * commissionDecimal;
-  const monthlyDbSteadyColibry = revenueDbYearSteadyColibry / 12;
   
-  // Apply dropoff to Colibry cumulative revenue
-  const revenueDb12mColibry = calculateCumulativeRevenueWithDropoff(
-    monthlyDbSteadyColibry, 12, inputs.rampMonths,
+  // Colibry effective coverage (steady-state, accounting for deliverability)
+  const colibryEffectiveCoverageSteady = calculateColibryEffectiveCoverageSteady(
     inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
   );
-  const revenueDb24mColibry = calculateCumulativeRevenueWithDropoff(
-    monthlyDbSteadyColibry, 24, inputs.rampMonths,
+  
+  // INCREMENTAL UPLIFT MODEL:
+  // extraReach = pool × (colibryEffectiveCoverage - manualCoverage)
+  // extraMandates = extraReach × upliftRate
+  const extraReachDb = dbSellers * Math.max(0, colibryEffectiveCoverageSteady - manualCoverage);
+  const extraMandatesDb = extraReachDb * upliftRate;
+  
+  // Revenue from extra mandates (steady-state)
+  const extraRevenueDbYearSteady = extraMandatesDb * inputs.avgSalePrice * commissionDecimal;
+  const monthlyExtraRevenue = extraRevenueDbYearSteady / 12;
+  
+  // Apply ramp-up + dropoff to cumulative projections
+  // Manual has no revenue in this model (uplift is on delta-reach, not absolute)
+  // We only calculate Colibry extra revenue with ramp + dropoff
+  const extraRevenueDb12m = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraRevenue, 12, inputs.rampMonths,
     inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
   );
-  const revenueDbYear2OnlyColibry = revenueDb24mColibry - revenueDb12mColibry;
-
-  // Delta
-  const extraDealsDb = dbDealsColibry - dbDealsManual;
-  const extraRevenueDbYearSteady = revenueDbYearSteadyColibry - revenueDbYearSteadyManual;
-  const extraRevenueDb12m = revenueDb12mColibry - revenueDb12mManual;
-  const extraRevenueDb24m = revenueDb24mColibry - revenueDb24mManual;
-  const extraRevenueDbYear2Only = revenueDbYear2OnlyColibry - revenueDbYear2OnlyManual;
+  const extraRevenueDb24m = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraRevenue, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const extraRevenueDbYear2Only = extraRevenueDb24m - extraRevenueDb12m;
 
   // Dropoff context
   const effectiveReach12m = calculateAverageEffectiveFactor(12, inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth);
@@ -322,119 +316,98 @@ export function calculateDatabaseResults(inputs: CalculatorInputs): DatabaseResu
 
   return {
     dbSellers: Math.round(dbSellers),
-    dbWarmManual: Math.round(dbWarmManual),
-    dbDealsManual: Math.round(dbDealsManual),
-    revenueDbYearSteadyManual,
-    revenueDb12mManual,
-    revenueDb24mManual,
-    revenueDbYear2OnlyManual,
-    dbWarmColibry: Math.round(dbWarmColibry),
-    dbDealsColibry: Math.round(dbDealsColibry),
-    revenueDbYearSteadyColibry,
-    revenueDb12mColibry,
-    revenueDb24mColibry,
-    revenueDbYear2OnlyColibry,
-    extraDealsDb: Math.round(extraDealsDb),
+    extraReachDb: Math.round(extraReachDb),
+    extraMandatesDb: Math.round(extraMandatesDb),
     extraRevenueDbYearSteady,
     extraRevenueDb12m,
     extraRevenueDb24m,
     extraRevenueDbYear2Only,
     effectiveReach12m,
     effectiveReach24m,
+    colibryEffectiveCoverageSteady,
   };
 }
 
 /**
- * Calculate visits potential with 60-70% range and Manual vs Colibry scenarios
- * Also calculates untapped pool (silent sellers - baseline mandates from prior contact)
- * Colibry includes dropoff from bounces/unsubs
+ * Calculate visits potential with INCREMENTAL UPLIFT model
+ * 
+ * Supports two modes:
+ * - 'tasks': Uses 60-70% heuristic on non-buyers (current fallback)
+ * - 'unique_contacts': Uses actual unique visitor counts (future BigQuery data)
+ * 
+ * Key formula:
+ * extraReach = pool × (colibryEffectiveCoverage - manualCoverage)
+ * extraMandates = extraReach × upliftRate
  */
 export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults {
   const { visits12m, sales12m } = normalizeInputs(inputs);
   const manualCoverage = inputs.manualFollowUpPercent / 100;
-  const colibryCoverage = 1.0; // 100%
-  const conversionRate = inputs.conversionRatePercent / 100;
+  const upliftRate = inputs.upliftRatePercent / 100;
   const commissionDecimal = inputs.commissionPercent / 100;
-  
-  // Baseline from prior contact
-  const baseline = calculateBaselineStatus(inputs);
 
   const visitsPerMonth = visits12m / 12;
   const salesPerMonth = sales12m / 12;
   const nonBuyersPerMonth = Math.max(visitsPerMonth - salesPerMonth, 0);
 
-  // 60-70% range of non-buyers are potential sellers
-  const visitSellersMonthLow = nonBuyersPerMonth * 0.60;
-  const visitSellersMonthHigh = nonBuyersPerMonth * 0.70;
-  const visitSellersYearLow = visitSellersMonthLow * 12;
-  const visitSellersYearHigh = visitSellersMonthHigh * 12;
+  let visitSellersYearLow: number;
+  let visitSellersYearHigh: number;
+  const isTasksMode = inputs.visitsInputMode === 'tasks';
 
-  // Untapped pool = silent sellers - what we already get from prior contact
-  // This shows "what's still on the table"
-  const untappedSellersYearLow = Math.max(visitSellersYearLow - baseline.baselineMandatesFromPriorContact, 0);
-  const untappedSellersYearHigh = Math.max(visitSellersYearHigh - baseline.baselineMandatesFromPriorContact, 0);
+  if (isTasksMode) {
+    // Tasks mode: 60-70% heuristic (existing approach, data quality caveat)
+    visitSellersYearLow = nonBuyersPerMonth * 12 * 0.60;
+    visitSellersYearHigh = nonBuyersPerMonth * 12 * 0.70;
+  } else {
+    // Unique contacts mode: use actual unique visitor counts with owner share
+    const lowerVisitors = Math.max(0, inputs.uniqueVisitors12mLower);
+    const upperVisitors = Math.max(lowerVisitors, inputs.uniqueVisitors12mUpper || lowerVisitors + 43);
+    visitSellersYearLow = lowerVisitors * inputs.ownerShareAmongVisitorsLow;
+    visitSellersYearHigh = upperVisitors * inputs.ownerShareAmongVisitorsHigh;
+  }
 
-  // Per day calculation
+  const visitSellersMonthLow = visitSellersYearLow / 12;
+  const visitSellersMonthHigh = visitSellersYearHigh / 12;
   const visitSellersPerDayLow = visitSellersMonthLow / inputs.workdaysPerMonth;
   const visitSellersPerDayHigh = visitSellersMonthHigh / inputs.workdaysPerMonth;
 
-  // Manual scenario (no dropoff)
-  const visitWarmManualLow = visitSellersYearLow * manualCoverage;
-  const visitWarmManualHigh = visitSellersYearHigh * manualCoverage;
-  const visitDealsManualLow = visitWarmManualLow * conversionRate;
-  const visitDealsManualHigh = visitWarmManualHigh * conversionRate;
-  const revenueVisitYearSteadyManualLow = visitDealsManualLow * inputs.avgSalePrice * commissionDecimal;
-  const revenueVisitYearSteadyManualHigh = visitDealsManualHigh * inputs.avgSalePrice * commissionDecimal;
-  const monthlyManualLow = revenueVisitYearSteadyManualLow / 12;
-  const monthlyManualHigh = revenueVisitYearSteadyManualHigh / 12;
-  const revenueVisit12mManualLow = calculateCumulativeRevenue(monthlyManualLow, 12, inputs.rampMonths);
-  const revenueVisit12mManualHigh = calculateCumulativeRevenue(monthlyManualHigh, 12, inputs.rampMonths);
-  const revenueVisit24mManualLow = calculateCumulativeRevenue(monthlyManualLow, 24, inputs.rampMonths);
-  const revenueVisit24mManualHigh = calculateCumulativeRevenue(monthlyManualHigh, 24, inputs.rampMonths);
-  const revenueVisitYear2OnlyManualLow = revenueVisit24mManualLow - revenueVisit12mManualLow;
-  const revenueVisitYear2OnlyManualHigh = revenueVisit24mManualHigh - revenueVisit12mManualHigh;
+  // Colibry effective coverage (steady-state)
+  const colibryEffectiveCoverageSteady = calculateColibryEffectiveCoverageSteady(
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
 
-  // Colibry scenario (with dropoff)
-  const visitWarmColibryLow = visitSellersYearLow * colibryCoverage;
-  const visitWarmColibryHigh = visitSellersYearHigh * colibryCoverage;
-  const visitDealsColibryLow = visitWarmColibryLow * conversionRate;
-  const visitDealsColibryHigh = visitWarmColibryHigh * conversionRate;
-  const revenueVisitYearSteadyColibryLow = visitDealsColibryLow * inputs.avgSalePrice * commissionDecimal;
-  const revenueVisitYearSteadyColibryHigh = visitDealsColibryHigh * inputs.avgSalePrice * commissionDecimal;
-  const monthlyColibryLow = revenueVisitYearSteadyColibryLow / 12;
-  const monthlyColibryHigh = revenueVisitYearSteadyColibryHigh / 12;
-  
-  // Apply dropoff to Colibry cumulative revenue
-  const revenueVisit12mColibryLow = calculateCumulativeRevenueWithDropoff(
-    monthlyColibryLow, 12, inputs.rampMonths,
-    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
-  );
-  const revenueVisit12mColibryHigh = calculateCumulativeRevenueWithDropoff(
-    monthlyColibryHigh, 12, inputs.rampMonths,
-    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
-  );
-  const revenueVisit24mColibryLow = calculateCumulativeRevenueWithDropoff(
-    monthlyColibryLow, 24, inputs.rampMonths,
-    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
-  );
-  const revenueVisit24mColibryHigh = calculateCumulativeRevenueWithDropoff(
-    monthlyColibryHigh, 24, inputs.rampMonths,
-    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
-  );
-  const revenueVisitYear2OnlyColibryLow = revenueVisit24mColibryLow - revenueVisit12mColibryLow;
-  const revenueVisitYear2OnlyColibryHigh = revenueVisit24mColibryHigh - revenueVisit12mColibryHigh;
+  // INCREMENTAL UPLIFT MODEL:
+  // extraReach = pool × (colibryEffectiveCoverage - manualCoverage)
+  // extraMandates = extraReach × upliftRate
+  const extraReachVisitLow = visitSellersYearLow * Math.max(0, colibryEffectiveCoverageSteady - manualCoverage);
+  const extraReachVisitHigh = visitSellersYearHigh * Math.max(0, colibryEffectiveCoverageSteady - manualCoverage);
+  const extraMandatesVisitLow = extraReachVisitLow * upliftRate;
+  const extraMandatesVisitHigh = extraReachVisitHigh * upliftRate;
 
-  // Delta
-  const extraDealsVisitLow = visitDealsColibryLow - visitDealsManualLow;
-  const extraDealsVisitHigh = visitDealsColibryHigh - visitDealsManualHigh;
-  const extraRevenueVisitYearSteadyLow = revenueVisitYearSteadyColibryLow - revenueVisitYearSteadyManualLow;
-  const extraRevenueVisitYearSteadyHigh = revenueVisitYearSteadyColibryHigh - revenueVisitYearSteadyManualHigh;
-  const extraRevenueVisit12mLow = revenueVisit12mColibryLow - revenueVisit12mManualLow;
-  const extraRevenueVisit12mHigh = revenueVisit12mColibryHigh - revenueVisit12mManualHigh;
-  const extraRevenueVisit24mLow = revenueVisit24mColibryLow - revenueVisit24mManualLow;
-  const extraRevenueVisit24mHigh = revenueVisit24mColibryHigh - revenueVisit24mManualHigh;
-  const extraRevenueVisitYear2OnlyLow = revenueVisitYear2OnlyColibryLow - revenueVisitYear2OnlyManualLow;
-  const extraRevenueVisitYear2OnlyHigh = revenueVisitYear2OnlyColibryHigh - revenueVisitYear2OnlyManualHigh;
+  // Revenue from extra mandates (steady-state)
+  const extraRevenueVisitYearSteadyLow = extraMandatesVisitLow * inputs.avgSalePrice * commissionDecimal;
+  const extraRevenueVisitYearSteadyHigh = extraMandatesVisitHigh * inputs.avgSalePrice * commissionDecimal;
+  const monthlyExtraLow = extraRevenueVisitYearSteadyLow / 12;
+  const monthlyExtraHigh = extraRevenueVisitYearSteadyHigh / 12;
+
+  // Apply ramp-up + dropoff to cumulative projections
+  const extraRevenueVisit12mLow = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraLow, 12, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const extraRevenueVisit12mHigh = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraHigh, 12, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const extraRevenueVisit24mLow = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraLow, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const extraRevenueVisit24mHigh = calculateCumulativeRevenueWithDropoff(
+    monthlyExtraHigh, 24, inputs.rampMonths,
+    inputs.bounceRate, inputs.unsubPerEmail, inputs.emailsPerMonth
+  );
+  const extraRevenueVisitYear2OnlyLow = extraRevenueVisit24mLow - extraRevenueVisit12mLow;
+  const extraRevenueVisitYear2OnlyHigh = extraRevenueVisit24mHigh - extraRevenueVisit12mHigh;
 
   return {
     visitsPerMonth: Math.round(visitsPerMonth),
@@ -446,34 +419,11 @@ export function calculateVisitsResults(inputs: CalculatorInputs): VisitsResults 
     visitSellersYearHigh: Math.round(visitSellersYearHigh),
     visitSellersPerDayLow,
     visitSellersPerDayHigh,
-    untappedSellersYearLow: Math.round(untappedSellersYearLow),
-    untappedSellersYearHigh: Math.round(untappedSellersYearHigh),
-    visitWarmManualLow: Math.round(visitWarmManualLow),
-    visitWarmManualHigh: Math.round(visitWarmManualHigh),
-    visitDealsManualLow: Math.round(visitDealsManualLow),
-    visitDealsManualHigh: Math.round(visitDealsManualHigh),
-    revenueVisitYearSteadyManualLow,
-    revenueVisitYearSteadyManualHigh,
-    revenueVisit12mManualLow,
-    revenueVisit12mManualHigh,
-    revenueVisit24mManualLow,
-    revenueVisit24mManualHigh,
-    revenueVisitYear2OnlyManualLow,
-    revenueVisitYear2OnlyManualHigh,
-    visitWarmColibryLow: Math.round(visitWarmColibryLow),
-    visitWarmColibryHigh: Math.round(visitWarmColibryHigh),
-    visitDealsColibryLow: Math.round(visitDealsColibryLow),
-    visitDealsColibryHigh: Math.round(visitDealsColibryHigh),
-    revenueVisitYearSteadyColibryLow,
-    revenueVisitYearSteadyColibryHigh,
-    revenueVisit12mColibryLow,
-    revenueVisit12mColibryHigh,
-    revenueVisit24mColibryLow,
-    revenueVisit24mColibryHigh,
-    revenueVisitYear2OnlyColibryLow,
-    revenueVisitYear2OnlyColibryHigh,
-    extraDealsVisitLow: Math.round(extraDealsVisitLow),
-    extraDealsVisitHigh: Math.round(extraDealsVisitHigh),
+    isTasksMode,
+    extraReachVisitLow: Math.round(extraReachVisitLow),
+    extraReachVisitHigh: Math.round(extraReachVisitHigh),
+    extraMandatesVisitLow: Math.round(extraMandatesVisitLow),
+    extraMandatesVisitHigh: Math.round(extraMandatesVisitHigh),
     extraRevenueVisitYearSteadyLow,
     extraRevenueVisitYearSteadyHigh,
     extraRevenueVisit12mLow,
@@ -512,10 +462,10 @@ export interface CalculatorViewModel {
   // Baseline status: what you have today
   baselineStatus: BaselineStatus;
   primaryOutputs: {
-    extraDealsDb: number;
-    extraDealsVisitLow: number;
-    extraDealsVisitHigh: number;
-    // Revenue over time (Colibry scenario)
+    extraMandatesDb: number;
+    extraMandatesVisitLow: number;
+    extraMandatesVisitHigh: number;
+    // Revenue over time (uplift)
     extraRevenueDb12m: number;
     extraRevenueDbYear2Only: number;
     extraRevenueDb24m: number;
@@ -559,9 +509,9 @@ export function buildViewModel(
     },
     baselineStatus,
     primaryOutputs: {
-      extraDealsDb: dbResults.extraDealsDb,
-      extraDealsVisitLow: visitsResults.extraDealsVisitLow,
-      extraDealsVisitHigh: visitsResults.extraDealsVisitHigh,
+      extraMandatesDb: dbResults.extraMandatesDb,
+      extraMandatesVisitLow: visitsResults.extraMandatesVisitLow,
+      extraMandatesVisitHigh: visitsResults.extraMandatesVisitHigh,
       extraRevenueDb12m: dbResults.extraRevenueDb12m,
       extraRevenueDbYear2Only: dbResults.extraRevenueDbYear2Only,
       extraRevenueDb24m: dbResults.extraRevenueDb24m,
@@ -575,7 +525,7 @@ export function buildViewModel(
       extraRevenueVisitYearSteadyLow: visitsResults.extraRevenueVisitYearSteadyLow,
       extraRevenueVisitYearSteadyHigh: visitsResults.extraRevenueVisitYearSteadyHigh,
     },
-    transparencyText: `Colibry volgt 100% op. Extra succesratio blijft ${inputs.conversionRatePercent}%; het verschil komt door bereik.`,
+    transparencyText: `We rekenen conservatief met ${inputs.upliftRatePercent}% extra mandaten op de extra doelgroep die je dankzij nurture wél bereikt.`,
     overlapWarning: "Tel database en plaatsbezoeken niet op (mogelijke overlap).",
     detailOutputs: {
       database: dbResults,
@@ -604,7 +554,7 @@ export function buildCtaUrl(
     sales12m: String(inputs.sales12m),
     periodUnit: inputs.periodUnit,
     manualFollowUpPercent: String(inputs.manualFollowUpPercent),
-    conversionRatePercent: String(inputs.conversionRatePercent),
+    upliftRatePercent: String(inputs.upliftRatePercent),
     workdaysPerMonth: String(inputs.workdaysPerMonth),
     ownershipRate: String(inputs.ownershipRate),
     avgSalePrice: String(inputs.avgSalePrice),
@@ -616,15 +566,21 @@ export function buildCtaUrl(
     emailsPerMonth: String(inputs.emailsPerMonth),
     // Baseline
     priorVisitShare: String(inputs.shareMandatesWithPriorVisit),
-    // Database delta outputs
-    extraDealsDb: String(dbResults.extraDealsDb),
+    // Visits mode
+    visitsInputMode: inputs.visitsInputMode,
+    uniqueVisitors12mLower: String(inputs.uniqueVisitors12mLower),
+    uniqueVisitors12mUpper: String(inputs.uniqueVisitors12mUpper),
+    ownerShareAmongVisitorsLow: String(inputs.ownerShareAmongVisitorsLow),
+    ownerShareAmongVisitorsHigh: String(inputs.ownerShareAmongVisitorsHigh),
+    // Database uplift outputs
+    extraMandatesDb: String(dbResults.extraMandatesDb),
     extraRevenueDbYearSteady: String(Math.round(dbResults.extraRevenueDbYearSteady)),
     extraRevenueDb12m: String(Math.round(dbResults.extraRevenueDb12m)),
     extraRevenueDb24m: String(Math.round(dbResults.extraRevenueDb24m)),
     extraRevenueDbYear2Only: String(Math.round(dbResults.extraRevenueDbYear2Only)),
-    // Visits delta outputs
-    extraDealsVisitLow: String(visitsResults.extraDealsVisitLow),
-    extraDealsVisitHigh: String(visitsResults.extraDealsVisitHigh),
+    // Visits uplift outputs
+    extraMandatesVisitLow: String(visitsResults.extraMandatesVisitLow),
+    extraMandatesVisitHigh: String(visitsResults.extraMandatesVisitHigh),
     extraRevenueVisitYearSteadyLow: String(Math.round(visitsResults.extraRevenueVisitYearSteadyLow)),
     extraRevenueVisitYearSteadyHigh: String(Math.round(visitsResults.extraRevenueVisitYearSteadyHigh)),
     extraRevenueVisit12mLow: String(Math.round(visitsResults.extraRevenueVisit12mLow)),

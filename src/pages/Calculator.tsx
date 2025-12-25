@@ -6,6 +6,7 @@ import InputCard from "@/components/calculator/InputCard";
 import CoreResultCard from "@/components/calculator/CoreResultCard";
 import DetailsAccordion from "@/components/calculator/DetailsAccordion";
 import SettingsCollapsible from "@/components/calculator/SettingsCollapsible";
+import BusinesscaseDataModal from "@/components/calculator/BusinesscaseDataModal";
 import {
   CalculatorInputs,
   DEFAULT_INPUTS,
@@ -35,12 +36,15 @@ const Calculator = () => {
           <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
             {viewModel.heroCopy.microcopy}
           </p>
-          <Link
-            to="/uitleg"
-            className="text-xs text-primary hover:underline mt-1 inline-block"
-          >
-            Hoe berekenen we dit? →
-          </Link>
+          <div className="flex items-center gap-4 mt-2">
+            <Link
+              to="/uitleg"
+              className="text-xs text-primary hover:underline"
+            >
+              Hoe berekenen we dit? →
+            </Link>
+            <BusinesscaseDataModal />
+          </div>
         </header>
 
         {/* Above the fold: Inputs + Core Result */}

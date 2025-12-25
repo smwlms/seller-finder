@@ -29,7 +29,7 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
             {" "}van je mandaten komt uit eerdere contacten
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Baseline zonder Colibry, gebaseerd op {formatNumber(baselineStatus.salesPerYear)} verkopen/jaar
+            Baseline zonder Colibry, gebaseerd op {formatNumber(baselineStatus.salesPerYear)} mandaten/jaar
           </p>
         </div>
       </div>
@@ -49,11 +49,11 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
             Database
           </h3>
           
-          {/* Key metric: Extra deals */}
+          {/* Key metric: Extra mandates */}
           <div className="bg-primary/10 rounded-md p-3">
             <p className="text-xs text-muted-foreground">Extra mandaten/jaar (gemist)</p>
             <p className="text-2xl font-bold text-primary">
-              {formatNumber(primaryOutputs.extraDealsDb)}
+              {formatNumber(primaryOutputs.extraMandatesDb)}
             </p>
           </div>
 
@@ -85,11 +85,11 @@ const CoreResultCard = ({ viewModel }: CoreResultCardProps) => {
             Plaatsbezoeken
           </h3>
           
-          {/* Key metric: Extra deals (range) */}
+          {/* Key metric: Extra mandates (range) */}
           <div className="bg-primary/10 rounded-md p-3">
             <p className="text-xs text-muted-foreground">Extra mandaten/jaar (gemist)</p>
             <p className="text-2xl font-bold text-primary">
-              {formatRange(primaryOutputs.extraDealsVisitLow, primaryOutputs.extraDealsVisitHigh)}
+              {formatRange(primaryOutputs.extraMandatesVisitLow, primaryOutputs.extraMandatesVisitHigh)}
             </p>
           </div>
 
